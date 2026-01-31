@@ -1,0 +1,16 @@
+{
+    "name": "void-fix-agent",
+    "version": "1.0.0",
+    "description": "Simulated AI Agent that listens to MCP Server and fixes tickets",
+    "main": "agent.ts",
+    "scripts": {
+        "start": "tsx agent.ts"
+    },
+    "dependencies": {
+        "eventsource": "^2.0.2",
+        "node-fetch": "^3.3.2",
+        "tsx": "^4.7.1",
+        "chalk": "^5.3.0"
+    },
+    "type": "module"
+}

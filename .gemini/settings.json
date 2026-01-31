@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "void-tickets": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "tsx",
+        "d:/CodeAD CODE-BASE/VOID/mcp-server/src/mcp-protocol.ts"
+      ],
+      "env": {
+        "PATH": "C:\\Program Files\\nodejs;${env:PATH}" 
+      }
+    }
+  }
+}

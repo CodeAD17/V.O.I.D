@@ -1,0 +1,7 @@
+{
+  "name": "MCP Voice Agent",
+  "description": "In-app voice agent using Gemini Live API to capture context, transcribe intent, and post sanitized tickets to an MCP server.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

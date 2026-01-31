@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # MCP Server - Fastify API
+  mcp-server:
+    build: ./mcp-server
+    container_name: void-mcp-server
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - JWT_SECRET=${JWT_SECRET:-void-mcp-secret-change-this}
+      - JWT_EXPIRES_IN=1h
+      - DB_PATH=/app/data/void.db
+      - CORS_ORIGIN=http://localhost:8080
+    volumes:
+      - mcp-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Admin Dashboard - React App
+  admin-app:
+    build: ./admin-app
+    container_name: void-admin-app
+    ports:
+      - "8080:80"
+    depends_on:
+      - mcp-server
+    restart: unless-stopped
+
+  # Fix Agent Stub (for demo purposes)
+  fix-agent:
+    image: node:20-alpine
+    container_name: void-fix-agent
+    working_dir: /app
+    command: >
+      sh -c "
+        echo 'Fix Agent stub ready. Use demo.sh to simulate agent actions.';
+        tail -f /dev/null
+      "
+    depends_on:
+      - mcp-server
+    restart: unless-stopped
+
+volumes:
+  mcp-data:
+    driver: local
+
+networks:
+  default:
+    name: void-network

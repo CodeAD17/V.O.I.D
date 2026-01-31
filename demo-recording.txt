@@ -1,0 +1,207 @@
+# Demo Recording - VOID MCP Server
+
+This document records a simulated demo session of the VOID MCP Server.
+
+## Session Start
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║              VOID MCP Server Demo                            ║
+╚══════════════════════════════════════════════════════════════╝
+
+🔍 Checking MCP server...
+✅ Server is healthy
+```
+
+## Step 1: Voice Agent Creates Ticket
+
+```bash
+$ curl -X POST http://localhost:3000/auth/login \
+    -H 'Content-Type: application/json' \
+    -d '{"username":"voice","password":"voicepass"}'
+
+Response:
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "username": "voice",
+      "role": "voice_agent"
+    }
+  }
+}
+```
+
+```bash
+$ curl -X POST http://localhost:3000/api/tickets \
+    -H 'Content-Type: application/json' \
+    -H 'Authorization: Bearer eyJhbG...' \
+    -d '{
+      "title": "Login button overlaps footer on mobile",
+      "description": "iPhone 12, Safari - button hidden behind footer",
+      "component": "Login",
+      "priority": "HIGH",
+      "user_context": {"device": "iPhone 12", "route": "/login"}
+    }'
+
+Response:
+{
+  "success": true,
+  "data": {
+    "ticket_id": "T-8F3B2A1C",
+    "status": "PENDING",
+    "created_at": "2024-01-24T11:30:00.000Z"
+  }
+}
+
+✅ Ticket created: T-8F3B2A1C
+```
+
+## Step 2: Fix Agent Claims and Fixes
+
+```bash
+$ curl -X POST http://localhost:3000/auth/login \
+    -H 'Content-Type: application/json' \
+    -d '{"username":"fixagent","password":"fixpass"}'
+
+Response:
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
+      "username": "fixagent",
+      "role": "fix_agent"
+    }
+  }
+}
+```
+
+```bash
+$ curl -X POST http://localhost:3000/api/tickets/T-8F3B2A1C/claim \
+    -H 'Authorization: Bearer eyJhbG...'
+
+Response:
+{
+  "success": true,
+  "data": { "status": "IN_PROGRESS" }
+}
+
+✅ Ticket claimed
+```
+
+```bash
+$ curl -X POST http://localhost:3000/api/tickets/T-8F3B2A1C/submit_fix \
+    -H 'Content-Type: application/json' \
+    -H 'Authorization: Bearer eyJhbG...' \
+    -d '{
+      "summary": "Fixed z-index issue on login button",
+      "files_modified": ["src/components/Login.css", "src/components/Footer.css"],
+      "diff": "diff --git a/src/components/Login.css...",
+      "sandbox_preview_url": "https://demo-preview.trycloudflare.com",
+      "test_results": { "status": "PASS", "logs": "All 3 tests passed" }
+    }'
+
+Response:
+{
+  "success": true,
+  "data": { "status": "REVIEW_PENDING" }
+}
+
+✅ Fix submitted for review
+```
+
+## Step 3: Admin Approves
+
+```bash
+$ curl -X POST http://localhost:3000/auth/login \
+    -H 'Content-Type: application/json' \
+    -d '{"username":"admin","password":"adminpass"}'
+
+Response:
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "username": "admin",
+      "role": "admin"
+    }
+  }
+}
+```
+
+```bash
+$ curl -X POST http://localhost:3000/api/tickets/T-8F3B2A1C/approve \
+    -H 'Content-Type: application/json' \
+    -H 'Authorization: Bearer eyJhbG...' \
+    -d '{
+      "approved_by": "admin",
+      "note": "Fix looks good. Z-index approach is correct."
+    }'
+
+Response:
+{
+  "success": true,
+  "data": { "status": "APPROVED_FOR_PROD" }
+}
+
+✅ Fix approved for production!
+```
+
+## Final State
+
+```bash
+$ curl http://localhost:3000/api/tickets/T-8F3B2A1C \
+    -H 'Authorization: Bearer eyJhbG...'
+
+Response:
+{
+  "success": true,
+  "data": {
+    "ticket": {
+      "id": "T-8F3B2A1C",
+      "title": "Login button overlaps footer on mobile",
+      "status": "APPROVED_FOR_PROD",
+      "priority": "HIGH",
+      "component": "Login",
+      "diff": "diff --git a/src/components/Login.css...",
+      "files_modified": ["src/components/Login.css", "src/components/Footer.css"],
+      "sandbox_preview_url": "https://demo-preview.trycloudflare.com",
+      "approved_by": "550e8400-e29b-41d4-a716-446655440000",
+      "approval_note": "Fix looks good. Z-index approach is correct."
+    }
+  }
+}
+```
+
+## SSE Events Received (Admin Dashboard)
+
+```json
+{"type":"connected","payload":{"user_id":"...","username":"admin"},"timestamp":"2024-01-24T11:30:00.000Z"}
+{"type":"ticket.created","payload":{"ticket_id":"T-8F3B2A1C","title":"Login button overlaps...","priority":"HIGH"},"timestamp":"..."}
+{"type":"ticket.claimed","payload":{"ticket_id":"T-8F3B2A1C","claimed_by":"fixagent"},"timestamp":"..."}
+{"type":"ticket.submitted_fix","payload":{"ticket_id":"T-8F3B2A1C","summary":"Fixed z-index...","sandbox_preview_url":"https://..."},"timestamp":"..."}
+{"type":"ticket.approved","payload":{"ticket_id":"T-8F3B2A1C","approved_by":"admin"},"timestamp":"..."}
+```
+
+## Audit Log Entries
+
+| Timestamp | Actor | Action | Payload |
+|-----------|-------|--------|---------|
+| 11:30:00 | voice | ticket.created | {"ticket_id":"T-8F3B2A1C"} |
+| 11:30:15 | fixagent | ticket.claimed | {"ticket_id":"T-8F3B2A1C"} |
+| 11:31:00 | fixagent | ticket.submitted_fix | {"ticket_id":"T-8F3B2A1C","files_modified":[...]} |
+| 11:32:00 | admin | ticket.approved | {"ticket_id":"T-8F3B2A1C","note":"..."} |
+
+---
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║              Demo Complete! ✨                               ║
+╚══════════════════════════════════════════════════════════════╝
+```
