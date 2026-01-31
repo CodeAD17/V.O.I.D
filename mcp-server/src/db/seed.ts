@@ -13,7 +13,7 @@ function hashPassword(password: string): string {
 }
 
 export function seedDatabase(): void {
-    console.log('🌱 Seeding database with demo users...');
+    console.log('🌱 [Seed] Checking/Seeding database with demo users...');
 
     // Run migrations first
     runMigrations();
@@ -25,15 +25,21 @@ export function seedDatabase(): void {
         { username: 'voice', password: 'voicepass', role: 'voice_agent' },
     ];
 
+    const checkUser = db.prepare('SELECT id FROM users WHERE username = ?');
     const insertUser = db.prepare(`
-    INSERT OR REPLACE INTO users (id, username, password_hash, role)
-    VALUES (?, ?, ?, ?)
-  `);
+        INSERT INTO users (id, username, password_hash, role)
+        VALUES (?, ?, ?, ?)
+    `);
 
     for (const user of users) {
-        const id = uuid();
-        insertUser.run(id, user.username, hashPassword(user.password), user.role);
-        console.log(`  ✅ Created user: ${user.username} (${user.role})`);
+        const existing = checkUser.get(user.username);
+        if (!existing) {
+            const id = uuid();
+            insertUser.run(id, user.username, hashPassword(user.password), user.role);
+            console.log(`  ✅ Created user: ${user.username} (${user.role})`);
+        } else {
+            // console.log(`  ℹ️ User exists: ${user.username}`);
+        }
     }
 
     console.log('✅ Database seeding completed');

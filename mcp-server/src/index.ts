@@ -7,7 +7,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
-import { runMigrations } from './db/index.js';
+import { runMigrations, seedDatabase } from './db/index.js';
 import { authRoutes, ticketRoutes, previewRoutes, eventsRoutes } from './routes/index.js';
 import { logger } from './utils/logger.js';
 import type { JWTPayload } from './types/index.js';
@@ -137,6 +137,9 @@ async function start() {
         // Run database migrations
         console.log('🔧 Initializing database...');
         runMigrations();
+
+        // Seed database if needed (idempotent)
+        seedDatabase();
 
         // Start server
         await fastify.listen({ port: PORT, host: HOST });
